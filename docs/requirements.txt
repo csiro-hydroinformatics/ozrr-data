@@ -1,0 +1,15 @@
+xarray
+# cftime
+pandas
+scipy # to have netcdf read/write
+geopandas
+mkdocs-material
+mkdocs-material-extensions
+mkdocstrings
+mkdocs-jupyter
+# added by readthedocs anyway:
+mock
+pillow
+recommonmark 
+six
+mkdocs

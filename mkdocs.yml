@@ -1,0 +1,17 @@
+site_name: ozrr-data
+
+theme:
+  name: "readthedocs"
+  # name: "material"
+
+plugins:
+  - search
+  - mkdocstrings
+  - mkdocs-jupyter
+
+nav:
+  - Home: index.md
+  - Code Documentation: code-reference.md
+  - Sample notebook: examples/camels-aus-introduction.ipynb
+  - Appendix:
+      - Tech Notes: tech_notes.md

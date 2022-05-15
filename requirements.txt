@@ -1,0 +1,6 @@
+pandas
+numpy
+xarray
+scipy # to have netcdf read/write to save xarrays, but actually netcdf4 is less buggy:
+netcdf4
+# cftime

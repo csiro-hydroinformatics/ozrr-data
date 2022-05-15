@@ -1,0 +1,24 @@
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9 # is it necessary to pin? 3.10, latest may be fine.
+  - ipykernel
+  # - mamba # May interfere with swift via yaml-cpp dependencies. Bad move
+  - pandas
+  - xarray 
+  - scipy # to have netcdf read/write
+  - geopandas # camels-aus dependency. Likely useful for EDA
+  - Cython # hydrodiy
+  - requests # hydrodiy
+  - pillow # hydrodiy
+  - matplotlib
+  - cffi # swift2
+  - numpy
+  - jsonpickle
+  - netcdf4 # ozrr package, esp. on windows otherwise int overflow with scipy
+  - pip
+  - pip:
+    - camels-aus # reuse some functions rather than duplicate.
+    # - git+https://bitbucket.org/jlerat/hydrodiy@master#egg=hydrodiy
+    - git+https://bitbucket.org/jm75/hydrodiy@testing#egg=hydrodiy
+
