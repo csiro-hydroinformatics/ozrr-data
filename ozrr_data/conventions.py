@@ -1,3 +1,8 @@
+"""Define constants for conventions for netCDF names, etc.
+"""
+
+# There are inspired by the swift netCDF conventions, and CF (climate and forecasting) conventions
+
 STATIONS_DIM_NAME = "station"
 STATION_ID_VARNAME = "station_id"
 LEAD_TIME_DIM_NAME = "lead_time"
@@ -39,7 +44,7 @@ MODELLED_SERIES_LABEL = "Modelled"
 TRAINING_LABEL = "Training"
 TESTING_LABEL = "Testing"
 
-
+# Variable names found in the source data set by Lerat et al.
 EVAP_D_COL = "evap[mm/d]"
 AWRA_SS_D_COL = "AWRA_SS[mm]"
 TEMPMAX_D_COL = "TEMPmax[C]"
