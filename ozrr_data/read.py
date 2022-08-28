@@ -7,11 +7,11 @@ from pathlib import Path, PosixPath
 from .conventions import SERIES_VARNAME, TIME_DIM_NAME
 
 
-def data_load(fn:str) -> pd.DataFrame:
+def data_load(fn: str) -> pd.DataFrame:
     return pd.read_csv(fn, skiprows=range(0, 15))
 
 
-def load_rr_series(fn:str) -> xr.DataArray:
+def load_rr_series(fn: str) -> xr.DataArray:
     rr_series = data_load(fn)
     return xr_time_series(rr_series)
 

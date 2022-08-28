@@ -29,7 +29,7 @@ def xr_time_series(rr_series: pd.DataFrame) -> xr.DataArray:
         Coordinates:
         * time       (time) datetime64[ns] 2000-01-01 2001-01-01
         * series_id  (series_id) object 'rain' 'evap'
-    """    
+    """
     assert TIME_DIM_NAME in rr_series.columns
     indx = [pd.Timestamp(x) for x in rr_series[TIME_DIM_NAME]]
     rr_series = rr_series.drop([TIME_DIM_NAME], axis=1)
@@ -44,7 +44,9 @@ def xr_time_series(rr_series: pd.DataFrame) -> xr.DataArray:
     return res
 
 
-def to_xarray_ts(list_series: Sequence[pd.DataFrame], station_ids: Sequence[str]) -> xr.DataArray:
+def to_xarray_ts(
+    list_series: Sequence[pd.DataFrame], station_ids: Sequence[str]
+) -> xr.DataArray:
     """Create a multidimensional time series, multi-variate and multiple gauging stations
 
     Args:
@@ -56,7 +58,7 @@ def to_xarray_ts(list_series: Sequence[pd.DataFrame], station_ids: Sequence[str]
 
     Example:
         >>> def f(): return pd.DataFrame.from_dict({'time': ['2000-01-01', '2001-01-01'], 'rain': [0.0, 1.2], 'evap': [0.9, 0.2]})
-        ... 
+        ...
         >>> f()
                 time  rain  evap
         0  2000-01-01   0.0   0.9
@@ -80,7 +82,9 @@ def to_xarray_ts(list_series: Sequence[pd.DataFrame], station_ids: Sequence[str]
     return rr_series
 
 
-def as_ts_df(series: pd.DataFrame, colnames:List[str]=None, new_colnames:List[str]=None) -> pd.DataFrame:
+def as_ts_df(
+    series: pd.DataFrame, colnames: List[str] = None, new_colnames: List[str] = None
+) -> pd.DataFrame:
     """transform a data frame, or subset of it, to a multivariate time series represented as a data frame
 
     Args:
@@ -146,3 +150,50 @@ def to_monthly_xr(
     rr_series_sl.coords[SERIES_VARNAME] = [OBSERVED_SERIES_LABEL, MODELLED_SERIES_LABEL]
     return rr_series_sl
 
+
+class SeriesComparison:
+    def __init__(self, results_ds: xr.Dataset) -> None:
+        self.results_ds = results_ds
+
+    def results_cumsums(
+        self,
+        station_id: str,
+        model_ids: Sequence[str],
+        start: pd.Timestamp = None,
+        end: pd.Timestamp = None,
+    ):
+        one_station = self.results_ds.series.sel(station=station_id)
+        one_station = one_station.sel(time=slice(start, end))
+
+        def f(x, series_id, model_id):
+            return (
+                x.sel(series_id=series_id)
+                .sel(model=model_id)
+                .squeeze(drop=True)
+                .reset_coords(drop=True)
+            )
+
+        import numpy as np
+
+        assert len(model_ids) > 0
+        ro = f(one_station, series_id=OBSERVED_SERIES_LABEL, model_id=model_ids[0])
+        mod_series = [
+            f(one_station, series_id=MODELLED_SERIES_LABEL, model_id=m)
+            for m in model_ids
+        ]
+
+        mask_display = np.logical_not(np.isnan(ro.values))
+        mask_calc = mask_display
+
+        mod_series_masked = [m.where(mask_calc) for m in mod_series]
+        ro_cs = ro.cumsum(skipna=True)
+        mod_series_masked_cs = [m.cumsum(skipna=True) for m in mod_series_masked]
+
+        # finally replace the misleading "flats" in cumulated values resulting from NaNs, with NaNs
+        masked_ro_cs = ro_cs.where(mask_display)
+        masked_cumulated_series = [m.where(mask_display) for m in mod_series_masked_cs]
+
+        x = xr.concat(([masked_ro_cs] + masked_cumulated_series), dim=SERIES_VARNAME)
+
+        x.coords[SERIES_VARNAME] = [OBSERVED_SERIES_LABEL] + model_ids
+        return x

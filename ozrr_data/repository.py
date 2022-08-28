@@ -72,8 +72,8 @@ def get_xr_units(x: xr.DataArray) -> str:
 
 def to_monoindex_series(x_multiindex: xr.DataArray) -> xr.DataArray:
     """Transform a yearly or monthly time series with possibly multi-indices to a CF time series
-    
-        Work in progress; possibly too use case specific
+
+    Work in progress; possibly too use case specific
     """
     if len(x_multiindex.station.shape) == 0:  # degenerate array, scalar value
         station_ids = [str(x_multiindex.station.values)]
@@ -86,8 +86,13 @@ def to_monoindex_series(x_multiindex: xr.DataArray) -> xr.DataArray:
         y = x_multiindex.year.to_numpy()
         dates = ["-".join([str(y[i]), "01", "01"]) for i in range(len(y))]
     elif hasattr(x_multiindex, "year_month"):
-        y = x_multiindex.year_month_level_0.to_numpy()
-        m = x_multiindex.year_month_level_1.to_numpy()
+        # Work around a breaking change with v2022.6.0  https://docs.xarray.dev/en/stable/whats-new.html#v2022-06-0-july-21-2022
+        if hasattr(x_multiindex, "time_level_0"):
+            y = x_multiindex.time_level_0.to_numpy()
+            m = x_multiindex.time_level_1.to_numpy()
+        else:
+            y = x_multiindex.year_month_level_0.to_numpy()
+            m = x_multiindex.year_month_level_1.to_numpy()
         dates = ["-".join([str(y[i]), str(m[i]), "01"]) for i in range(len(y))]
 
     time_index = [pd.Timestamp(x) for x in dates]
@@ -104,8 +109,8 @@ def to_monoindex_series(x_multiindex: xr.DataArray) -> xr.DataArray:
 
 def to_pd_series(x: xr.DataArray) -> pd.Series:
     """Converts an xarray multiindex monthly time series to a pandas series
-    
-        Very use case specific. Revisit.
+
+    Very use case specific. Revisit.
     """
     indx = pd.DatetimeIndex(
         [pd.Timestamp(year=m_y[0], month=m_y[1], day=1) for m_y in x.year_month.values]
@@ -113,44 +118,45 @@ def to_pd_series(x: xr.DataArray) -> pd.Series:
     return pd.Series(x.values, indx)
 
 
-def _group_monthly(daily_series):
+def _group_monthly(daily_series: xr.DataArray):
     return daily_series.groupby("year_month")
 
 
-def _group_yearly(daily_series):
+def _group_yearly(daily_series: xr.DataArray):
     return daily_series.groupby("year")
 
 
-def sum_monthly(daily_series):
+def sum_monthly(daily_series: xr.DataArray):
     return _group_monthly(daily_series).sum(skipna=False)
 
 
-def max_monthly(daily_series):
+def max_monthly(daily_series: xr.DataArray):
     return _group_monthly(daily_series).max(skipna=False)
 
 
-def mean_monthly(daily_series):
+def mean_monthly(daily_series: xr.DataArray):
     return _group_monthly(daily_series).mean(skipna=False)
 
 
-def sum_yearly(daily_series):
+def sum_yearly(daily_series: xr.DataArray):
     return _group_yearly(daily_series).sum(skipna=False)
 
 
-def max_yearly(daily_series):
+def max_yearly(daily_series: xr.DataArray):
     return _group_yearly(daily_series).max(skipna=False)
 
 
-def mean_yearly(daily_series):
+def mean_yearly(daily_series: xr.DataArray):
     return _group_yearly(daily_series).mean(skipna=False)
 
 
 class OzDataProcessing:
     """Class handling the lower-level ingestion of on-disk data
 
-        Data set from [Lerat, J., Thyer, M., McInerney, D., Kavetski, D., Woldemeskel, F., Pickett-Heaps, C., Shin, D., & Feikema, P. (2020). A robust approach for calibrating a daily rainfall-runoff model to monthly streamflow data. Journal of Hydrology, 591. https://doi.org/10.1016/j.jhydrol.2020.125129](https://doi.org/10.1016/j.jhydrol.2020.125129)
-    """    
-    def __init__(self, root_dir:Path, nc_filename:Path=None) -> None:
+    Data set from [Lerat, J., Thyer, M., McInerney, D., Kavetski, D., Woldemeskel, F., Pickett-Heaps, C., Shin, D., & Feikema, P. (2020). A robust approach for calibrating a daily rainfall-runoff model to monthly streamflow data. Journal of Hydrology, 591. https://doi.org/10.1016/j.jhydrol.2020.125129](https://doi.org/10.1016/j.jhydrol.2020.125129)
+    """
+
+    def __init__(self, root_dir: Path, nc_filename: Path = None) -> None:
         self.root_dir = root_dir
         self.sites_csv = root_dir / "sites.csv"
         self.rr_dir = root_dir / "rainfall_runoff"
@@ -161,7 +167,9 @@ class OzDataProcessing:
         )
         self.rr_series = None
 
-    def load_daily_data(self, discard_cached_nc:bool=False, lazy_loading:bool=False) -> xr.DataArray:
+    def load_daily_data(
+        self, discard_cached_nc: bool = False, lazy_loading: bool = False
+    ) -> xr.DataArray:
         import json
 
         if not self.rr_nc.exists() or discard_cached_nc:
@@ -269,7 +277,7 @@ class OzDataProcessing:
 
 
 def mk_xarray_series(
-    data: Union[np.ndarray,pd.Series],
+    data: Union[np.ndarray, pd.Series],
     dim_name: str = None,
     units: str = None,
     time_index: Optional[Union[List, pd.DatetimeIndex]] = None,
@@ -354,7 +362,7 @@ def _yr_var_id_for_name(name: str):
 
 
 class MaskTimeSeries:
-    def __init__(self, observed_ts:xr.DataArray) -> None:
+    def __init__(self, observed_ts: xr.DataArray) -> None:
         self._mask = np.logical_not(np.isnan(observed_ts.values))
 
     # WARNING: this is not checking anything about consistent time handling bewteen mask and input!
@@ -364,8 +372,8 @@ class MaskTimeSeries:
 
 class OzDataProvider:
     """A high level facade to access daily 'ozdata' and its derived monthly/yearly datasets
-    
-        Data set from [Lerat, J., Thyer, M., McInerney, D., Kavetski, D., Woldemeskel, F., Pickett-Heaps, C., Shin, D., & Feikema, P. (2020). A robust approach for calibrating a daily rainfall-runoff model to monthly streamflow data. Journal of Hydrology, 591. https://doi.org/10.1016/j.jhydrol.2020.125129](https://doi.org/10.1016/j.jhydrol.2020.125129)
+
+    Data set from [Lerat, J., Thyer, M., McInerney, D., Kavetski, D., Woldemeskel, F., Pickett-Heaps, C., Shin, D., & Feikema, P. (2020). A robust approach for calibrating a daily rainfall-runoff model to monthly streamflow data. Journal of Hydrology, 591. https://doi.org/10.1016/j.jhydrol.2020.125129](https://doi.org/10.1016/j.jhydrol.2020.125129)
 
     """
 
@@ -491,10 +499,10 @@ class OzDataProvider:
 
 
 def load_aus_rr_data(
-    aus_rr_root_dir:str=None,
-    discard_cached_nc:bool=False,
+    aus_rr_root_dir: str = None,
+    discard_cached_nc: bool = False,
     nc_cache_filename: str = "rainfall_runoff_series.nc",
-    lazy_loading:bool=False,
+    lazy_loading: bool = False,
     do_aggregate: bool = True,
 ) -> OzDataProvider:
     import os
