@@ -7,6 +7,8 @@ import xarray as xr
 import numpy as np
 import os
 
+from ozrr_data.data import to_xarray_ts, xr_time_series
+
 from .read import data_load, load_rr_series, get_catchment_id
 
 from .conventions import (
@@ -126,28 +128,28 @@ def _group_yearly(daily_series: xr.DataArray):
     return daily_series.groupby("year")
 
 
-def sum_monthly(daily_series: xr.DataArray):
-    return _group_monthly(daily_series).sum(skipna=False)
+def sum_monthly(daily_series: xr.DataArray, skipna=False):
+    return _group_monthly(daily_series).sum(skipna=skipna)
 
 
-def max_monthly(daily_series: xr.DataArray):
-    return _group_monthly(daily_series).max(skipna=False)
+def max_monthly(daily_series: xr.DataArray, skipna=False):
+    return _group_monthly(daily_series).max(skipna=skipna)
 
 
-def mean_monthly(daily_series: xr.DataArray):
-    return _group_monthly(daily_series).mean(skipna=False)
+def mean_monthly(daily_series: xr.DataArray, skipna=False):
+    return _group_monthly(daily_series).mean(skipna=skipna)
 
 
-def sum_yearly(daily_series: xr.DataArray):
-    return _group_yearly(daily_series).sum(skipna=False)
+def sum_yearly(daily_series: xr.DataArray, skipna=False):
+    return _group_yearly(daily_series).sum(skipna=skipna)
 
 
-def max_yearly(daily_series: xr.DataArray):
-    return _group_yearly(daily_series).max(skipna=False)
+def max_yearly(daily_series: xr.DataArray, skipna=False):
+    return _group_yearly(daily_series).max(skipna=skipna)
 
 
-def mean_yearly(daily_series: xr.DataArray):
-    return _group_yearly(daily_series).mean(skipna=False)
+def mean_yearly(daily_series: xr.DataArray, skipna=False):
+    return _group_yearly(daily_series).mean(skipna=skipna)
 
 
 class OzDataProcessing:
@@ -226,13 +228,13 @@ class OzDataProcessing:
         self.rr_series = rr_series
         return self.rr_series
 
-    def get_monthly(self) -> xr.DataArray:
+    def get_monthly(self, skipna_tmax=True) -> xr.DataArray:
         assert self.rr_series is not None
         rr_series = self.rr_series
         rain_mm_mth = sum_monthly(rr_series.sel(series_id=RAIN_D_COL))
         evap_mm_mth = sum_monthly(rr_series.sel(series_id=EVAP_D_COL))
         runoff_mm_mth = sum_monthly(rr_series.sel(series_id=RUNOFF_D_COL))
-        tmax_mean_mth = mean_monthly(rr_series.sel(series_id=TEMPMAX_D_COL))
+        tmax_mean_mth = mean_monthly(rr_series.sel(series_id=TEMPMAX_D_COL), skipna=skipna_tmax)
 
         rain_mm_mth = rain_mm_mth.rename("rain_mm_mth").reset_coords(
             SERIES_VARNAME, drop=True
@@ -367,6 +369,8 @@ class MaskTimeSeries:
 
     # WARNING: this is not checking anything about consistent time handling bewteen mask and input!
     def mask(self, x: xr.DataArray):
+        if isinstance(x, pd.DataFrame) or isinstance(x, pd.Series):
+            x = xr_time_series(x)
         return x.where(self._mask)
 
 

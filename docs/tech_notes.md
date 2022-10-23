@@ -31,7 +31,7 @@ conda install -c conda-forge wheel twine six pytest
 
 ```sh
 conda activate ${my_env_name}
-cd ${HOME}/src/github_jm/camels-aus-py
+cd ${HOME}/src/camels-aus-py
 mkdir -p dist
 rm dist/*
 python3 setup.py sdist bdist_wheel

@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Union
 from .conventions import (
     MODELLED_SERIES_LABEL,
     MONTH_TIME_DIM_NAME,
@@ -11,7 +11,48 @@ import pandas as pd
 import xarray as xr
 
 
-def xr_time_series(rr_series: pd.DataFrame) -> xr.DataArray:
+def _pdseries_to_xr_time_series(rr_series: pd.Series) -> xr.DataArray:
+    """Creates an xarray time series out of a pandas series
+
+    Args:
+        rr_series (pd.DataFrame): data frame where one of the columns is named 'time', with values that can be used to construct a pd.Timestamp
+
+    Returns:
+        xr.DataArray: a uni or multi-variate time series
+
+    """
+    assert isinstance(rr_series, pd.Series)
+    indx = rr_series.index
+    assert isinstance(indx, pd.DatetimeIndex)
+    name = ""
+    if hasattr(rr_series, "name"):
+        name = rr_series.name
+    res = xr.DataArray(
+        rr_series.values,
+        coords={
+            TIME_DIM_NAME: indx,
+        },
+        dims=[TIME_DIM_NAME],
+    )
+    res.name = name
+    return res
+
+def _pddf_to_xr_time_series(rr_series: pd.DataFrame) -> xr.DataArray:
+    assert TIME_DIM_NAME in rr_series.columns
+    indx = [pd.Timestamp(x) for x in rr_series[TIME_DIM_NAME]]
+    rr_series = rr_series.drop([TIME_DIM_NAME], axis=1)
+    res = xr.DataArray(
+        rr_series.values,
+        coords={
+            TIME_DIM_NAME: pd.DatetimeIndex(indx),
+            SERIES_VARNAME: rr_series.columns,
+        },
+        dims=[TIME_DIM_NAME, SERIES_VARNAME],
+    )
+    return res
+
+
+def xr_time_series(rr_series: Union[pd.DataFrame, pd.Series]) -> xr.DataArray:
     """Creates an xarray time series out of a data frame
 
     Args:
@@ -30,18 +71,12 @@ def xr_time_series(rr_series: pd.DataFrame) -> xr.DataArray:
         * time       (time) datetime64[ns] 2000-01-01 2001-01-01
         * series_id  (series_id) object 'rain' 'evap'
     """
-    assert TIME_DIM_NAME in rr_series.columns
-    indx = [pd.Timestamp(x) for x in rr_series[TIME_DIM_NAME]]
-    rr_series = rr_series.drop([TIME_DIM_NAME], axis=1)
-    res = xr.DataArray(
-        rr_series.values,
-        coords={
-            TIME_DIM_NAME: pd.DatetimeIndex(indx),
-            SERIES_VARNAME: rr_series.columns,
-        },
-        dims=[TIME_DIM_NAME, SERIES_VARNAME],
-    )
-    return res
+    if isinstance(rr_series, pd.Series):
+        return _pdseries_to_xr_time_series(rr_series)
+    elif isinstance(rr_series, pd.DataFrame):
+        return _pddf_to_xr_time_series(rr_series)
+    else:
+        raise NotImplementedError(f"Unhandled type for conversion to xarray time series: {type(rr_series)}")
 
 
 def to_xarray_ts(
