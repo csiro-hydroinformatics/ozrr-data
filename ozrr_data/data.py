@@ -61,7 +61,7 @@ def xr_time_series(rr_series: Union[pd.DataFrame, pd.Series]) -> xr.DataArray:
     Returns:
         xr.DataArray: a uni or multi-variate time series
 
-    Example:
+    Examples:
         >>> x = pd.DataFrame.from_dict({'time': ['2000-01-01', '2001-01-01'], 'rain': [0.0, 1.2], 'evap': [0.9, 0.2]})
         >>> xr_time_series(x)
         <xarray.DataArray (time: 2, series_id: 2)>
@@ -91,7 +91,7 @@ def to_xarray_ts(
     Returns:
         xr.DataArray: multi-dim array of time series
 
-    Example:
+    Examples:
         >>> def f(): return pd.DataFrame.from_dict({'time': ['2000-01-01', '2001-01-01'], 'rain': [0.0, 1.2], 'evap': [0.9, 0.2]})
         ...
         >>> f()
