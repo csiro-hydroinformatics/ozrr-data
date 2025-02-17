@@ -30,7 +30,7 @@ Using a conda environment is recommended. To create a new environment:
 cd ${HOME}/tmp
 wget https://raw.githubusercontent.com/csiro-hydroinformatics/camels-aus-py/main/configs/ozrr_environment.yml
 my_env_name=camels
-onda env create -n $my_env_name -f ./ozrr_environment.yml
+conda env create -n $my_env_name -f ./ozrr_environment.yml
 conda activate $my_env_name 
 ```
 
